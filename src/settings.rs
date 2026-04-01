@@ -69,7 +69,21 @@ pub struct Settings {
 
 impl Settings {
     pub fn path() -> String {
-        format!("{}/.kube/kubie.yaml", home_dir())
+        // Prefer XDG config directory, fall back to ~/.kube/ for backwards compatibility.
+        let xdg_path = dirs::config_dir()
+            .map(|d| d.join("kubie").join("config.yaml"))
+            .filter(|p| p.exists());
+        if let Some(p) = xdg_path {
+            return p.to_string_lossy().to_string();
+        }
+        let legacy_path = format!("{}/.kube/kubie.yaml", home_dir());
+        if Path::new(&legacy_path).exists() {
+            return legacy_path;
+        }
+        // Neither exists -- default to XDG location for new installs.
+        dirs::config_dir()
+            .map(|d| d.join("kubie").join("config.yaml").to_string_lossy().to_string())
+            .unwrap_or(legacy_path)
     }
 
     pub fn load() -> Result<Settings> {

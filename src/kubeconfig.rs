@@ -14,10 +14,21 @@ use wildmatch::WildMatch;
 use crate::ioutil;
 use crate::settings::Settings;
 
+fn deserialize_null_default<'de, D, T>(deserializer: D) -> std::result::Result<T, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: Default + Deserialize<'de>,
+{
+    Ok(Option::deserialize(deserializer)?.unwrap_or_default())
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct KubeConfig {
+    #[serde(default, deserialize_with = "deserialize_null_default")]
     pub clusters: Vec<NamedCluster>,
+    #[serde(default, deserialize_with = "deserialize_null_default")]
     pub users: Vec<NamedUser>,
+    #[serde(default, deserialize_with = "deserialize_null_default")]
     pub contexts: Vec<NamedContext>,
     #[serde(rename = "current-context")]
     pub current_context: Option<String>,
