@@ -1,0 +1,500 @@
+#compdef kubie
+
+autoload -U is-at-least
+
+_kubie() {
+    typeset -A opt_args
+    typeset -a _arguments_options
+    local ret=1
+
+    if is-at-least 5.2; then
+        _arguments_options=(-s -S -C)
+    else
+        _arguments_options=(-s -C)
+    fi
+
+    local context curcontext="$curcontext" state line
+    _arguments "${_arguments_options[@]}" : \
+'-h[Print help]' \
+'--help[Print help]' \
+'-V[Print version]' \
+'--version[Print version]' \
+":: :_kubie_commands" \
+"*::: :->kubie" \
+&& ret=0
+    case $state in
+    (kubie)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:kubie-command-$line[1]:"
+        case $line[1] in
+            (ctx)
+_arguments "${_arguments_options[@]}" : \
+'-n+[Specify in which namespace of the context the shell is spawned]:NAMESPACE_NAME:_default' \
+'--namespace=[Specify in which namespace of the context the shell is spawned]:NAMESPACE_NAME:_default' \
+'*-f+[Specify files from which to load contexts instead of using the installed ones]:KUBECONFIGS:_default' \
+'*--kubeconfig=[Specify files from which to load contexts instead of using the installed ones]:KUBECONFIGS:_default' \
+'-r[Enter the context by spawning a new recursive shell]' \
+'--recursive[Enter the context by spawning a new recursive shell]' \
+'-h[Print help]' \
+'--help[Print help]' \
+'::context_name -- Name of the context to enter. Use '\''-'\'' to switch back to the previous context:_default' \
+&& ret=0
+;;
+(ns)
+_arguments "${_arguments_options[@]}" : \
+'-r[Enter the namespace by spawning a new recursive shell]' \
+'--recursive[Enter the namespace by spawning a new recursive shell]' \
+'-u[Unsets the namespace in the currently active context]' \
+'--unset[Unsets the namespace in the currently active context]' \
+'-h[Print help]' \
+'--help[Print help]' \
+'::namespace_name -- Name of the namespace to enter. Use '\''-'\'' to switch back to the previous namespace:_default' \
+&& ret=0
+;;
+(info)
+_arguments "${_arguments_options[@]}" : \
+'-h[Print help]' \
+'--help[Print help]' \
+":: :_kubie__info_commands" \
+"*::: :->info" \
+&& ret=0
+
+    case $state in
+    (info)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:kubie-info-command-$line[1]:"
+        case $line[1] in
+            (ctx)
+_arguments "${_arguments_options[@]}" : \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(ns)
+_arguments "${_arguments_options[@]}" : \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(depth)
+_arguments "${_arguments_options[@]}" : \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_kubie__info__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:kubie-info-help-command-$line[1]:"
+        case $line[1] in
+            (ctx)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(ns)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(depth)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+;;
+(exec)
+_arguments "${_arguments_options[@]}" : \
+'--context-headers=[Overrides behavior.print_context_in_exec in Kubie settings file]:CONTEXT_HEADERS_FLAG:(auto always never)' \
+'-e[Exit early if a command fails when using a wildcard context]' \
+'--exit-early[Exit early if a command fails when using a wildcard context]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':context_name -- Name of the context in which to run the command:_default' \
+':namespace_name -- Namespace in which to run the command. This is mandatory to avoid potential errors:_default' \
+'*::args -- Command to run as well as its arguments:_default' \
+&& ret=0
+;;
+(export)
+_arguments "${_arguments_options[@]}" : \
+'-h[Print help]' \
+'--help[Print help]' \
+':context_name -- Name of the context to export:_default' \
+':namespace_name -- Name of the namespace in the context. This is mandatory to avoid potential errors:_default' \
+&& ret=0
+;;
+(lint)
+_arguments "${_arguments_options[@]}" : \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(edit)
+_arguments "${_arguments_options[@]}" : \
+'-h[Print help]' \
+'--help[Print help]' \
+'::context_name -- Name of the context to edit:_default' \
+&& ret=0
+;;
+(edit-config)
+_arguments "${_arguments_options[@]}" : \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(update)
+_arguments "${_arguments_options[@]}" : \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(delete)
+_arguments "${_arguments_options[@]}" : \
+'-h[Print help]' \
+'--help[Print help]' \
+'::context_name -- Name of the context to edit:_default' \
+&& ret=0
+;;
+(generate-completion)
+_arguments "${_arguments_options[@]}" : \
+'-h[Print help]' \
+'--help[Print help]' \
+'::shell -- The shell to generate the completion script for. Determined automatically if omitted:(bash elvish fish powershell zsh)' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_kubie__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:kubie-help-command-$line[1]:"
+        case $line[1] in
+            (ctx)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(ns)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(info)
+_arguments "${_arguments_options[@]}" : \
+":: :_kubie__help__info_commands" \
+"*::: :->info" \
+&& ret=0
+
+    case $state in
+    (info)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:kubie-help-info-command-$line[1]:"
+        case $line[1] in
+            (ctx)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(ns)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(depth)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+(exec)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(export)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(lint)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(edit)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(edit-config)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(update)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(delete)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(generate-completion)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+}
+
+(( $+functions[_kubie_commands] )) ||
+_kubie_commands() {
+    local commands; commands=(
+'ctx:Spawn a shell in the given context. The shell is isolated from other shells. Kubie shells can be spawned recursively without any issue' \
+'ns:Change the namespace in which the current shell operates. The namespace change does not affect other shells' \
+'info:View info about the current kubie shell, such as the context name and the current namespace' \
+'exec:Execute a command inside of the given context and namespace' \
+'export:Prints the path to an isolated configuration file for a context and namespace' \
+'lint:Check the Kubernetes config files for issues' \
+'edit:Edit the given context' \
+'edit-config:Edit kubie'\''s config file' \
+'update:Check for a Kubie update and replace Kubie'\''s binary if needed. This function can ask for sudo-mode' \
+'delete:Delete a context. Automatic garbage collection will be performed. Dangling users and clusters will be removed' \
+'generate-completion:Generate a completion script. Enable completion using \`source <(kubie generate-completion)\`. This can be added to your shell'\''s configuration file to enable completion automatically' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'kubie commands' commands "$@"
+}
+(( $+functions[_kubie__ctx_commands] )) ||
+_kubie__ctx_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie ctx commands' commands "$@"
+}
+(( $+functions[_kubie__delete_commands] )) ||
+_kubie__delete_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie delete commands' commands "$@"
+}
+(( $+functions[_kubie__edit_commands] )) ||
+_kubie__edit_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie edit commands' commands "$@"
+}
+(( $+functions[_kubie__edit-config_commands] )) ||
+_kubie__edit-config_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie edit-config commands' commands "$@"
+}
+(( $+functions[_kubie__exec_commands] )) ||
+_kubie__exec_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie exec commands' commands "$@"
+}
+(( $+functions[_kubie__export_commands] )) ||
+_kubie__export_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie export commands' commands "$@"
+}
+(( $+functions[_kubie__generate-completion_commands] )) ||
+_kubie__generate-completion_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie generate-completion commands' commands "$@"
+}
+(( $+functions[_kubie__help_commands] )) ||
+_kubie__help_commands() {
+    local commands; commands=(
+'ctx:Spawn a shell in the given context. The shell is isolated from other shells. Kubie shells can be spawned recursively without any issue' \
+'ns:Change the namespace in which the current shell operates. The namespace change does not affect other shells' \
+'info:View info about the current kubie shell, such as the context name and the current namespace' \
+'exec:Execute a command inside of the given context and namespace' \
+'export:Prints the path to an isolated configuration file for a context and namespace' \
+'lint:Check the Kubernetes config files for issues' \
+'edit:Edit the given context' \
+'edit-config:Edit kubie'\''s config file' \
+'update:Check for a Kubie update and replace Kubie'\''s binary if needed. This function can ask for sudo-mode' \
+'delete:Delete a context. Automatic garbage collection will be performed. Dangling users and clusters will be removed' \
+'generate-completion:Generate a completion script. Enable completion using \`source <(kubie generate-completion)\`. This can be added to your shell'\''s configuration file to enable completion automatically' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'kubie help commands' commands "$@"
+}
+(( $+functions[_kubie__help__ctx_commands] )) ||
+_kubie__help__ctx_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie help ctx commands' commands "$@"
+}
+(( $+functions[_kubie__help__delete_commands] )) ||
+_kubie__help__delete_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie help delete commands' commands "$@"
+}
+(( $+functions[_kubie__help__edit_commands] )) ||
+_kubie__help__edit_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie help edit commands' commands "$@"
+}
+(( $+functions[_kubie__help__edit-config_commands] )) ||
+_kubie__help__edit-config_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie help edit-config commands' commands "$@"
+}
+(( $+functions[_kubie__help__exec_commands] )) ||
+_kubie__help__exec_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie help exec commands' commands "$@"
+}
+(( $+functions[_kubie__help__export_commands] )) ||
+_kubie__help__export_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie help export commands' commands "$@"
+}
+(( $+functions[_kubie__help__generate-completion_commands] )) ||
+_kubie__help__generate-completion_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie help generate-completion commands' commands "$@"
+}
+(( $+functions[_kubie__help__help_commands] )) ||
+_kubie__help__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie help help commands' commands "$@"
+}
+(( $+functions[_kubie__help__info_commands] )) ||
+_kubie__help__info_commands() {
+    local commands; commands=(
+'ctx:Get the current shell'\''s context name' \
+'ns:Get the current shell'\''s namespace name' \
+'depth:Get the current depth of contexts' \
+    )
+    _describe -t commands 'kubie help info commands' commands "$@"
+}
+(( $+functions[_kubie__help__info__ctx_commands] )) ||
+_kubie__help__info__ctx_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie help info ctx commands' commands "$@"
+}
+(( $+functions[_kubie__help__info__depth_commands] )) ||
+_kubie__help__info__depth_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie help info depth commands' commands "$@"
+}
+(( $+functions[_kubie__help__info__ns_commands] )) ||
+_kubie__help__info__ns_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie help info ns commands' commands "$@"
+}
+(( $+functions[_kubie__help__lint_commands] )) ||
+_kubie__help__lint_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie help lint commands' commands "$@"
+}
+(( $+functions[_kubie__help__ns_commands] )) ||
+_kubie__help__ns_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie help ns commands' commands "$@"
+}
+(( $+functions[_kubie__help__update_commands] )) ||
+_kubie__help__update_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie help update commands' commands "$@"
+}
+(( $+functions[_kubie__info_commands] )) ||
+_kubie__info_commands() {
+    local commands; commands=(
+'ctx:Get the current shell'\''s context name' \
+'ns:Get the current shell'\''s namespace name' \
+'depth:Get the current depth of contexts' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'kubie info commands' commands "$@"
+}
+(( $+functions[_kubie__info__ctx_commands] )) ||
+_kubie__info__ctx_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie info ctx commands' commands "$@"
+}
+(( $+functions[_kubie__info__depth_commands] )) ||
+_kubie__info__depth_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie info depth commands' commands "$@"
+}
+(( $+functions[_kubie__info__help_commands] )) ||
+_kubie__info__help_commands() {
+    local commands; commands=(
+'ctx:Get the current shell'\''s context name' \
+'ns:Get the current shell'\''s namespace name' \
+'depth:Get the current depth of contexts' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'kubie info help commands' commands "$@"
+}
+(( $+functions[_kubie__info__help__ctx_commands] )) ||
+_kubie__info__help__ctx_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie info help ctx commands' commands "$@"
+}
+(( $+functions[_kubie__info__help__depth_commands] )) ||
+_kubie__info__help__depth_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie info help depth commands' commands "$@"
+}
+(( $+functions[_kubie__info__help__help_commands] )) ||
+_kubie__info__help__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie info help help commands' commands "$@"
+}
+(( $+functions[_kubie__info__help__ns_commands] )) ||
+_kubie__info__help__ns_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie info help ns commands' commands "$@"
+}
+(( $+functions[_kubie__info__ns_commands] )) ||
+_kubie__info__ns_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie info ns commands' commands "$@"
+}
+(( $+functions[_kubie__lint_commands] )) ||
+_kubie__lint_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie lint commands' commands "$@"
+}
+(( $+functions[_kubie__ns_commands] )) ||
+_kubie__ns_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie ns commands' commands "$@"
+}
+(( $+functions[_kubie__update_commands] )) ||
+_kubie__update_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie update commands' commands "$@"
+}
+
+if [ "$funcstack[1]" = "_kubie" ]; then
+    _kubie "$@"
+else
+    compdef _kubie kubie
+fi
