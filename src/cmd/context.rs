@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 
 use anyhow::Result;
 
-use crate::cloud::{self, CloudContext, CloudProvider};
+use crate::cloud::{self, CloudContext};
 use crate::cmd::SelectResult;
 use crate::kubeconfig::{self, Installed};
 use crate::kubectl;
@@ -101,10 +101,10 @@ fn select_or_list_merged(
 
     // Add cached cloud contexts that aren't already local.
     {
-        let cloud = cloud_contexts.lock().unwrap();
+        let cloud = cloud_contexts.lock().unwrap_or_else(|e| e.into_inner());
         for cc in cloud.iter() {
             if !local_names.contains(&cc.context_name) {
-                items.push(TaggedItem::new(cc.context_name.clone(), Some(cc.provider.to_string())));
+                items.push(TaggedItem::new(cc.context_name.clone(), Some(cc.provider.clone())));
             }
         }
     }
@@ -120,7 +120,7 @@ fn select_or_list_merged(
     }
 
     if io::stdout().is_terminal() {
-        let has_cloud_providers = !cloud::enabled_providers(settings).is_empty();
+        let has_cloud_providers = !cloud::enabled_providers(&settings.cloud).is_empty();
 
         if has_cloud_providers {
             let known_names: HashSet<String> = items.iter().map(|i| i.name.clone()).collect();
@@ -131,11 +131,11 @@ fn select_or_list_merged(
             items.reverse();
 
             let selected = crate::skim::select_with_bg(&settings.fzf, items, move |tx| {
-                let fresh = discover_with_cloud_settings(&settings_clone);
+                let fresh = discover_and_cache(&settings_clone);
 
                 // Update the shared cloud context list with fresh data.
                 {
-                    let mut cloud = cloud_for_bg.lock().unwrap();
+                    let mut cloud = cloud_for_bg.lock().unwrap_or_else(|e| e.into_inner());
                     *cloud = fresh.clone();
                 }
 
@@ -143,7 +143,7 @@ fn select_or_list_merged(
                 let new: Vec<TaggedItem> = fresh
                     .iter()
                     .filter(|c| !known_names.contains(&c.context_name))
-                    .map(|c| TaggedItem::new(c.context_name.clone(), Some(c.provider.to_string())))
+                    .map(|c| TaggedItem::new(c.context_name.clone(), Some(c.provider.clone())))
                     .collect();
 
                 if !new.is_empty() {
@@ -175,19 +175,17 @@ fn select_or_list_merged(
     }
 }
 
-/// Run cloud discovery using only the cloud settings (callable from a background thread).
-/// NOTE: when adding a new cloud provider, add its check here too (mirrors `cloud::enabled_providers`).
-fn discover_with_cloud_settings(cloud_settings: &crate::settings::CloudSettings) -> Vec<CloudContext> {
+/// Run cloud discovery and update the cache (callable from a background thread).
+fn discover_and_cache(cloud_settings: &crate::settings::CloudSettings) -> Vec<CloudContext> {
     let mut contexts = Vec::new();
-    if cloud_settings.doctl.enabled {
-        let provider = cloud::doctl::DoctlProvider;
-        match cloud::CloudProvider::discover(&provider) {
+    for provider in cloud::enabled_providers(cloud_settings) {
+        match provider.discover() {
             Ok(discovered) => {
                 let _ = cloud::cache::save_contexts(provider.name(), &discovered);
                 contexts.extend(discovered);
             }
             Err(e) => {
-                eprintln!("Warning: cloud provider 'doctl' discovery failed: {e}");
+                eprintln!("Warning: cloud provider '{}' discovery failed: {e}", provider.name());
             }
         }
     }
@@ -201,7 +199,7 @@ pub fn context(
     kubeconfigs: Vec<String>,
     recursive: bool,
 ) -> Result<()> {
-    let has_cloud = !cloud::enabled_providers(settings).is_empty();
+    let has_cloud = !cloud::enabled_providers(&settings.cloud).is_empty();
 
     let installed = if kubeconfigs.is_empty() {
         if has_cloud {
@@ -233,7 +231,7 @@ pub fn context(
 
     // Check if this is a cloud context (check the potentially-updated shared list).
     let cloud_ctx = {
-        let cloud = cloud_contexts.lock().unwrap();
+        let cloud = cloud_contexts.lock().unwrap_or_else(|e| e.into_inner());
         cloud.iter().find(|c| c.context_name == context_name).cloned()
     };
 

@@ -14,8 +14,8 @@ pub struct CloudContext {
     /// An opaque key that the provider uses to download the kubeconfig.
     /// For doctl this is `doctl_context:cluster_id`.
     pub provider_key: String,
-    /// Which provider owns this context.
-    pub provider: &'static str,
+    /// Which provider owns this context (e.g. `"doctl"`).
+    pub provider: String,
 }
 
 /// Trait that each cloud provider implements. Kept intentionally minimal
@@ -33,11 +33,11 @@ pub trait CloudProvider: Send {
     fn download_kubeconfig(&self, provider_key: &str) -> Result<String>;
 }
 
-/// Build the list of enabled cloud providers from settings.
-pub fn enabled_providers(settings: &Settings) -> Vec<Box<dyn CloudProvider>> {
+/// Build the list of enabled cloud providers from cloud settings.
+pub fn enabled_providers(cloud: &crate::settings::CloudSettings) -> Vec<Box<dyn CloudProvider>> {
     let mut providers: Vec<Box<dyn CloudProvider>> = Vec::new();
 
-    if settings.cloud.doctl.enabled {
+    if cloud.doctl.enabled {
         providers.push(Box::new(doctl::DoctlProvider));
     }
 
@@ -48,7 +48,7 @@ pub fn enabled_providers(settings: &Settings) -> Vec<Box<dyn CloudProvider>> {
 /// Returns an empty vec if no providers are enabled or no cache exists.
 pub fn load_cached(settings: &Settings) -> Vec<CloudContext> {
     let mut contexts = Vec::new();
-    for provider in enabled_providers(settings) {
+    for provider in enabled_providers(&settings.cloud) {
         if let Ok(Some(cached)) = cache::load_contexts(provider.name()) {
             contexts.extend(cached);
         }
@@ -58,7 +58,7 @@ pub fn load_cached(settings: &Settings) -> Vec<CloudContext> {
 
 /// Download the kubeconfig for a cloud context by finding its provider.
 pub fn download_kubeconfig(settings: &Settings, cloud_ctx: &CloudContext) -> Result<String> {
-    for provider in enabled_providers(settings) {
+    for provider in enabled_providers(&settings.cloud) {
         if provider.name() == cloud_ctx.provider {
             return provider.download_kubeconfig(&cloud_ctx.provider_key);
         }

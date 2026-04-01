@@ -2,6 +2,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
+use dirs;
 use serde::{Deserialize, Serialize};
 
 use super::CloudContext;
@@ -25,15 +26,9 @@ struct CacheFile {
     contexts: Vec<CachedContext>,
 }
 
-/// Returns the cache directory for a given provider.
-/// `$XDG_CACHE_HOME/kubie/cloud/<provider>/` (default `~/.cache/kubie/cloud/<provider>/`)
+/// Returns the cache file path for a given provider.
 fn cache_path(provider: &str) -> PathBuf {
-    let base = if let Ok(dir) = std::env::var("XDG_CACHE_HOME") {
-        PathBuf::from(dir)
-    } else {
-        let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
-        PathBuf::from(home).join(".cache")
-    };
+    let base = dirs::cache_dir().unwrap_or_else(|| PathBuf::from("/tmp"));
     base.join("kubie").join("cloud").join(provider).join("contexts.json")
 }
 
@@ -44,7 +39,7 @@ pub fn save_contexts(provider: &str, contexts: &[CloudContext]) -> Result<()> {
         .map(|c| CachedContext {
             context_name: c.context_name.clone(),
             provider_key: c.provider_key.clone(),
-            provider: c.provider.to_string(),
+            provider: c.provider.clone(),
         })
         .collect();
     let file = CacheFile {
@@ -52,15 +47,6 @@ pub fn save_contexts(provider: &str, contexts: &[CloudContext]) -> Result<()> {
         contexts: cached,
     };
     ioutil::write_json(cache_path(provider), &file).context("Could not save cloud context cache")
-}
-
-/// Map a cached provider name string to its static equivalent.
-/// Returns `None` for unknown providers (stale cache from a removed provider).
-fn match_provider_name(name: &str) -> Option<&'static str> {
-    match name {
-        "doctl" => Some("doctl"),
-        _ => None,
-    }
 }
 
 /// Load cached contexts for a provider. Returns `None` if no cache exists
@@ -76,13 +62,10 @@ pub fn load_contexts(provider: &str) -> Result<Option<Vec<CloudContext>>> {
             let contexts = f
                 .contexts
                 .into_iter()
-                .filter_map(|c| {
-                    let provider = match_provider_name(&c.provider)?;
-                    Some(CloudContext {
-                        context_name: c.context_name,
-                        provider_key: c.provider_key,
-                        provider,
-                    })
+                .map(|c| CloudContext {
+                    context_name: c.context_name,
+                    provider_key: c.provider_key,
+                    provider: c.provider,
                 })
                 .collect();
             Ok(Some(contexts))

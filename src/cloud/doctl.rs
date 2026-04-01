@@ -1,7 +1,7 @@
 use std::process::{Command, Stdio};
 
 use anyhow::{bail, Context, Result};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use super::{CloudContext, CloudProvider};
 
@@ -20,13 +20,13 @@ struct DoctlCluster {
     region: String,
 }
 
-/// Cluster metadata persisted to the cache.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClusterInfo {
-    pub id: String,
-    pub name: String,
-    pub region: String,
-    pub doctl_context: String,
+/// Cluster metadata used during discovery.
+#[derive(Debug, Clone, Deserialize)]
+struct ClusterInfo {
+    id: String,
+    name: String,
+    region: String,
+    doctl_context: String,
 }
 
 impl ClusterInfo {
@@ -59,7 +59,7 @@ impl CloudProvider for DoctlProvider {
                         cloud_contexts.push(CloudContext {
                             context_name: c.kube_context_name(),
                             provider_key: c.provider_key(),
-                            provider: "doctl",
+                            provider: "doctl".into(),
                         });
                     }
                 }

@@ -310,7 +310,10 @@ pub fn parse_kubeconfig_from_str(yaml: &str) -> Result<Installed> {
     let mut kubeconfig: KubeConfig = serde_yaml::from_str(yaml).context("Could not parse kubeconfig YAML")?;
 
     // Use a synthetic path since the kubeconfig does not originate from a file.
-    // doctl kubeconfigs use inline certificates so no relative path resolution is needed.
+    // Cloud provider kubeconfigs (e.g. doctl) embed certificates inline (base64),
+    // so the relative path resolution in make_kubeconfig_for_context is a no-op.
+    // If a future provider returns file-path cert references, write the kubeconfig
+    // to a temp file and use its real path instead.
     let path = Rc::new(PathBuf::from("<in-memory>"));
 
     let installed = Installed {
