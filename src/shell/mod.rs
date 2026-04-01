@@ -131,6 +131,11 @@ pub fn spawn_shell(settings: &Settings, config: KubeConfig, session: &Session) -
         prompt: prompt::generate_ps1(settings, next_depth, kind),
     };
 
+    // Run start_ctx hook before spawning the shell.
+    if !settings.hooks.start_ctx.is_empty() {
+        run_hook(&info, &settings.hooks.start_ctx);
+    }
+
     let result = match kind {
         ShellKind::Bash => bash::spawn_shell(&info),
         ShellKind::Fish => fish::spawn_shell(&info),
@@ -139,12 +144,27 @@ pub fn spawn_shell(settings: &Settings, config: KubeConfig, session: &Session) -
         ShellKind::Nu => nu::spawn_shell(&info),
     };
 
+    // Run stop_ctx hook after the shell exits.
+    if !settings.hooks.stop_ctx.is_empty() {
+        run_hook(&info, &settings.hooks.stop_ctx);
+    }
+
     // On normal exit, delete the temp files explicitly before drop
     // so the guardian has nothing left to clean up.
     let _ = temp_config_file.close();
     let _ = temp_session_file.close();
 
     result
+}
+
+/// Run a hook command in a subshell with kubie's env vars set.
+fn run_hook(info: &ShellSpawnInfo, hook: &str) {
+    let mut cmd = Command::new("sh");
+    cmd.args(["-c", hook]);
+    info.env_vars.apply(&mut cmd);
+    if let Ok(mut child) = cmd.spawn() {
+        let _ = child.wait();
+    }
 }
 
 /// Directory for the guardian's tracking file and pidfile.

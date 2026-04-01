@@ -80,23 +80,5 @@ unset KUBIE_PROMPT
     let mut child = cmd.spawn()?;
     child.wait()?;
 
-    if !info.settings.hooks.start_ctx.is_empty() {
-        let temp_exit_hook_file = tempfile::Builder::new()
-            .prefix("kubie-bash-exit-hook")
-            .suffix(".bash")
-            .tempfile()?;
-        let mut temp_exit_hook_file_buf = BufWriter::new(temp_exit_hook_file.as_file());
-
-        write!(temp_exit_hook_file_buf, "{}", info.settings.hooks.stop_ctx)?;
-
-        temp_exit_hook_file_buf.flush()?;
-        let mut exit_cmd = Command::new("bash");
-        exit_cmd.arg(temp_exit_hook_file.path());
-        info.env_vars.apply(&mut exit_cmd);
-
-        let mut child = exit_cmd.spawn()?;
-        child.wait()?;
-    }
-
     Ok(())
 }
