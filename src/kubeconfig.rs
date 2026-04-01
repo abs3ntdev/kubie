@@ -116,7 +116,11 @@ impl Installed {
             .collect()
     }
 
-    pub fn get_contexts_matching(&self, pattern: &str, allow_multiple_context_patterns: bool) -> Vec<&Sourced<NamedContext>> {
+    pub fn get_contexts_matching(
+        &self,
+        pattern: &str,
+        allow_multiple_context_patterns: bool,
+    ) -> Vec<&Sourced<NamedContext>> {
         let mut result = vec![];
 
         let patterns = if allow_multiple_context_patterns {
@@ -181,7 +185,14 @@ impl Installed {
         let str = mapping.get(key).unwrap().as_str().expect("value should be a string");
         let path = Path::new(str);
         if !path.is_absolute() {
-            mapping.insert(key.into(), parent.join(path).to_str().expect("path should be a valid unicode string").into());
+            mapping.insert(
+                key.into(),
+                parent
+                    .join(path)
+                    .to_str()
+                    .expect("path should be a valid unicode string")
+                    .into(),
+            );
         }
     }
 
@@ -198,7 +209,10 @@ impl Installed {
             .ok_or_else(|| anyhow!("Could not find context {}", context_name))?;
 
         context_src.item.context.namespace = namespace_name.map(Into::into);
-        let kubeconfig_dir = context_src.source.parent().expect("kubeconfig path should have a parent dir");
+        let kubeconfig_dir = context_src
+            .source
+            .parent()
+            .expect("kubeconfig path should have a parent dir");
 
         let cluster_src = self
             .find_cluster_by_name(&context_src.item.context.cluster, &context_src.source)
@@ -290,12 +304,41 @@ where
     Ok(installed)
 }
 
+/// Parse a kubeconfig from a YAML string into an `Installed` struct.
+/// This avoids writing the kubeconfig to disk just to read it back.
+pub fn parse_kubeconfig_from_str(yaml: &str) -> Result<Installed> {
+    let mut kubeconfig: KubeConfig = serde_yaml::from_str(yaml).context("Could not parse kubeconfig YAML")?;
+
+    // Use a synthetic path since the kubeconfig does not originate from a file.
+    // doctl kubeconfigs use inline certificates so no relative path resolution is needed.
+    let path = Rc::new(PathBuf::from("<in-memory>"));
+
+    let installed = Installed {
+        clusters: kubeconfig.clusters.drain(..).map(|x| Sourced::new(&path, x)).collect(),
+        contexts: kubeconfig.contexts.drain(..).map(|x| Sourced::new(&path, x)).collect(),
+        users: kubeconfig.users.drain(..).map(|x| Sourced::new(&path, x)).collect(),
+    };
+
+    if installed.contexts.is_empty() {
+        bail!("No contexts found in the provided kubeconfig");
+    }
+
+    Ok(installed)
+}
+
 pub fn get_installed_contexts(settings: &Settings) -> Result<Installed> {
     let installed = load_kubeconfigs(settings.get_kube_configs_paths()?)?;
     if installed.contexts.is_empty() {
         bail!("Could not find any contexts in the Kubie kubeconfig directories!");
     }
     Ok(installed)
+}
+
+/// Like `get_installed_contexts` but returns an empty `Installed` instead of
+/// bailing when no local contexts are found. Used when cloud providers may
+/// supply additional contexts.
+pub fn load_installed_contexts(settings: &Settings) -> Result<Installed> {
+    load_kubeconfigs(settings.get_kube_configs_paths()?)
 }
 
 pub fn get_kubeconfigs_contexts(kubeconfigs: &Vec<String>) -> Result<Installed> {

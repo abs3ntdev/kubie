@@ -63,6 +63,8 @@ pub struct Settings {
     pub hooks: Hooks,
     #[serde(default)]
     pub fzf: Fzf,
+    #[serde(default)]
+    pub cloud: CloudSettings,
 }
 
 impl Settings {
@@ -222,6 +224,18 @@ pub struct Hooks {
     pub start_ctx: String,
     #[serde(default)]
     pub stop_ctx: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct CloudSettings {
+    #[serde(default)]
+    pub doctl: DoctlSettings,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct DoctlSettings {
+    #[serde(default = "def_bool_false")]
+    pub enabled: bool,
 }
 
 fn def_bool_true() -> bool {

@@ -4,6 +4,7 @@ use clap::Parser;
 use cmd::meta::Kubie;
 use settings::Settings;
 
+mod cloud;
 mod cmd;
 mod ioutil;
 mod kubeconfig;
@@ -27,13 +28,7 @@ fn main() -> Result<()> {
             kubeconfigs,
             recursive,
         } => {
-            cmd::context::context(
-                &settings,
-                context_name,
-                namespace_name,
-                kubeconfigs,
-                recursive,
-            )?;
+            cmd::context::context(&settings, context_name, namespace_name, kubeconfigs, recursive)?;
         }
         Kubie::Namespace {
             namespace_name,

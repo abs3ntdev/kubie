@@ -16,6 +16,7 @@ you of what they are.
 * [Installation](#installation)
 * [Usage](#usage)
 * [Settings](#settings)
+* [Cloud providers](#cloud-providers)
 * [Future plans](#future-plans)
 
 Thanks to [@ahermant](https://github.com/ahermant) for the lovely logo!
@@ -63,7 +64,7 @@ Selectable menus will be available when using `kubie ctx` and `kubie ns`.
 
 ---
 
-* `kubie ctx` display a selectable menu of contexts
+* `kubie ctx` display a selectable menu of contexts (includes cloud provider contexts when enabled)
 * `kubie ctx <context>` switch the current shell to the given context (spawns a shell if not a kubie shell)
 * `kubie ctx -` switch back to the previous context (session history inside a kubie shell, last globally-used context otherwise)
 * `kubie ctx <context> -r` spawn a recursive shell in the given context
@@ -222,6 +223,21 @@ fzf:
     # See more option in skim docs: https://github.com/skim-rs/skim?tab=readme-ov-file#color-scheme
     # Default: unset
     color: "dark"
+
+# Cloud provider integration.
+# When enabled, cloud-managed Kubernetes clusters are discovered and displayed
+# alongside local contexts in `kubie ctx`. Kubeconfigs are fetched on-demand
+# when a cloud context is selected, parsed in memory, and never stored to disk
+# (kubie's own temp file is the only copy).
+cloud:
+    # DigitalOcean (doctl) integration.
+    # Requires `doctl` to be installed and authenticated (`doctl auth init`).
+    # Uses `--context` flags for all commands so global doctl auth state is
+    # never mutated.
+    doctl:
+        # Enable or disable doctl cluster discovery.
+        # Default: false
+        enabled: false
 ```
 
 ## For distro maintainers
@@ -229,6 +245,31 @@ Since `0.19.0`, the self update functionality is behind a feature. You can use `
 to produce a binary without the self update functionality. It's probably better if people rely on the distro's package
 manager for updates over this functionality. The binary produced is also quite smaller since it has fewer dependencies.
 
+## Cloud providers
+
+Kubie can discover Kubernetes clusters from cloud providers and display them alongside your local
+contexts in `kubie ctx`. When you select a cloud context, the kubeconfig is fetched on-demand and
+parsed in memory -- it is only written to disk once by kubie's own temp file management.
+
+Cloud providers are disabled by default. Enable them in `~/.kube/kubie.yaml`:
+
+```yaml
+cloud:
+  doctl:
+    enabled: true
+```
+
+### Supported providers
+
+| Provider | CLI required | Setting |
+|---|---|---|
+| DigitalOcean | `doctl` | `cloud.doctl.enabled` |
+
+The cloud provider system is designed to be extensible. Adding support for a new provider (e.g.
+`gcloud`, `aws`) requires implementing the `CloudProvider` trait with two methods: `discover` and
+`download_kubeconfig`.
+
 ## Future plans
+* Additional cloud provider integrations (AWS EKS, GCP GKE, Azure AKS)
 * Integration with vault to automatically download k8s configs from a vault server
 * Import/edit configs
