@@ -17,6 +17,7 @@ you of what they are.
 * [Usage](#usage)
 * [Settings](#settings)
 * [Cloud providers](#cloud-providers)
+* [Temp file cleanup](#temp-file-cleanup)
 * [Future plans](#future-plans)
 
 Thanks to [@ahermant](https://github.com/ahermant) for the lovely logo!
@@ -31,6 +32,13 @@ can use `curl` or `wget` to download it. Don't forget to `chmod +x` the file!
 You can build `kubie` from source using `cargo` and crates.io. If you do not have a Rust compiler installed, go to
 [rustup.rs](https://rustup.rs) to get one. Then you can run `cargo install kubie` and kubie will be downloaded from
 crates.io and then built.
+
+### From source
+Clone the repository and run:
+```sh
+make install            # builds release and installs to ~/.local/bin
+make install PREFIX=/usr/local   # or install to a custom prefix
+```
 
 ### Homebrew
 You can install `kubie` from Homebrew by running `brew install kubie`.
@@ -264,8 +272,10 @@ manager for updates over this functionality. The binary produced is also quite s
 ## Cloud providers
 
 Kubie can discover Kubernetes clusters from cloud providers and display them alongside your local
-contexts in `kubie ctx`. When you select a cloud context, the kubeconfig is fetched on-demand and
-parsed in memory -- it is only written to disk once by kubie's own temp file management.
+contexts in `kubie ctx`. Cloud contexts appear in the interactive picker tagged with their provider
+name (e.g. `[doctl]`, `[gcloud]`). When you select a cloud context, the kubeconfig is fetched
+on-demand and parsed in memory -- it is only written to disk once by kubie's own temp file
+management.
 
 Cloud providers are disabled by default. Enable them in `~/.kube/kubie.yaml`:
 
@@ -277,6 +287,10 @@ cloud:
     enabled: true
 ```
 
+Discovery results are cached so the picker appears instantly on subsequent runs. A background
+thread refreshes the cache while the picker is open, streaming any new contexts into the list
+in real time.
+
 ### Supported providers
 
 | Provider | CLI required | Setting |
@@ -284,9 +298,49 @@ cloud:
 | DigitalOcean | `doctl` | `cloud.doctl.enabled` |
 | Google Cloud (GKE) | `gcloud` | `cloud.gcloud.enabled` |
 
+### Filtering projects and contexts
+
+Each provider supports `include` and `exclude` lists to control which projects or auth contexts
+are queried. If `include` is set, only those entries are queried. `exclude` removes entries from
+whatever remains. If neither is set, everything is queried.
+
+```yaml
+cloud:
+  doctl:
+    enabled: true
+    # Only query these doctl auth contexts (default: all)
+    include:
+      - production
+      - staging
+    # Skip these doctl auth contexts
+    exclude:
+      - legacy
+
+  gcloud:
+    enabled: true
+    # Only query these GCP project IDs (default: all)
+    include:
+      - my-prod-project
+      - my-dev-project
+    # Skip these GCP project IDs
+    exclude:
+      - sandbox-project
+```
+
+### Adding a new provider
+
 The cloud provider system is designed to be extensible. Adding support for a new provider (e.g.
 `aws`) requires implementing the `CloudProvider` trait with two methods: `discover` and
 `download_kubeconfig`.
+
+## Temp file cleanup
+
+Kubie creates temporary kubeconfig and session files for each shell session. On normal exit these
+are cleaned up automatically. To handle abnormal exits (terminal closed, process killed, etc.),
+kubie spawns a shared guardian process that monitors active sessions and deletes orphaned temp
+files when their parent process is no longer running. The guardian runs in its own session
+(`setsid`) so it survives terminal close, and uses file locking to coordinate safely with
+concurrent kubie sessions.
 
 ## Future plans
 * Additional cloud provider integrations (AWS EKS, Azure AKS)
