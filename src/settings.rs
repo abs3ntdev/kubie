@@ -230,12 +230,32 @@ pub struct Hooks {
 pub struct CloudSettings {
     #[serde(default)]
     pub doctl: DoctlSettings,
+    #[serde(default)]
+    pub gcloud: GcloudSettings,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
 pub struct DoctlSettings {
     #[serde(default = "def_bool_false")]
     pub enabled: bool,
+    /// Only query these doctl auth contexts. If empty, all contexts are queried.
+    #[serde(default)]
+    pub include: Vec<String>,
+    /// Skip these doctl auth contexts.
+    #[serde(default)]
+    pub exclude: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct GcloudSettings {
+    #[serde(default = "def_bool_false")]
+    pub enabled: bool,
+    /// Only query these GCP projects. If empty, all accessible projects are queried.
+    #[serde(default)]
+    pub include: Vec<String>,
+    /// Skip these GCP projects.
+    #[serde(default)]
+    pub exclude: Vec<String>,
 }
 
 fn def_bool_true() -> bool {

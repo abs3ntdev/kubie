@@ -238,6 +238,22 @@ cloud:
         # Enable or disable doctl cluster discovery.
         # Default: false
         enabled: false
+        # Only query these doctl auth contexts. Default: all.
+        include: []
+        # Skip these doctl auth contexts.
+        exclude: []
+
+    # Google Cloud (gcloud) GKE integration.
+    # Requires `gcloud` to be installed and authenticated (`gcloud auth login`).
+    # Discovers clusters across all accessible projects.
+    gcloud:
+        # Enable or disable GKE cluster discovery.
+        # Default: false
+        enabled: false
+        # Only query these GCP project IDs. Default: all.
+        include: []
+        # Skip these GCP project IDs.
+        exclude: []
 ```
 
 ## For distro maintainers
@@ -257,6 +273,8 @@ Cloud providers are disabled by default. Enable them in `~/.kube/kubie.yaml`:
 cloud:
   doctl:
     enabled: true
+  gcloud:
+    enabled: true
 ```
 
 ### Supported providers
@@ -264,12 +282,13 @@ cloud:
 | Provider | CLI required | Setting |
 |---|---|---|
 | DigitalOcean | `doctl` | `cloud.doctl.enabled` |
+| Google Cloud (GKE) | `gcloud` | `cloud.gcloud.enabled` |
 
 The cloud provider system is designed to be extensible. Adding support for a new provider (e.g.
-`gcloud`, `aws`) requires implementing the `CloudProvider` trait with two methods: `discover` and
+`aws`) requires implementing the `CloudProvider` trait with two methods: `discover` and
 `download_kubeconfig`.
 
 ## Future plans
-* Additional cloud provider integrations (AWS EKS, GCP GKE, Azure AKS)
+* Additional cloud provider integrations (AWS EKS, Azure AKS)
 * Integration with vault to automatically download k8s configs from a vault server
 * Import/edit configs

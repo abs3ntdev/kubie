@@ -1,5 +1,6 @@
 pub mod cache;
 pub mod doctl;
+pub mod gcloud;
 
 use anyhow::Result;
 
@@ -38,7 +39,17 @@ pub fn enabled_providers(cloud: &crate::settings::CloudSettings) -> Vec<Box<dyn 
     let mut providers: Vec<Box<dyn CloudProvider>> = Vec::new();
 
     if cloud.doctl.enabled {
-        providers.push(Box::new(doctl::DoctlProvider));
+        providers.push(Box::new(doctl::DoctlProvider {
+            include: cloud.doctl.include.clone(),
+            exclude: cloud.doctl.exclude.clone(),
+        }));
+    }
+
+    if cloud.gcloud.enabled {
+        providers.push(Box::new(gcloud::GcloudProvider {
+            include: cloud.gcloud.include.clone(),
+            exclude: cloud.gcloud.exclude.clone(),
+        }));
     }
 
     providers

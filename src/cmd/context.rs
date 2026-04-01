@@ -109,6 +109,19 @@ fn select_or_list_merged(
         }
     }
 
+    // If we have no items yet but cloud providers are enabled, do a blocking
+    // sync so the first run has something to show.
+    if items.is_empty() && !cloud::enabled_providers(&settings.cloud).is_empty() {
+        let fresh = discover_and_cache(&settings.cloud);
+        let mut cloud = cloud_contexts.lock().unwrap_or_else(|e| e.into_inner());
+        *cloud = fresh;
+        for cc in cloud.iter() {
+            if !local_names.contains(&cc.context_name) {
+                items.push(TaggedItem::new(cc.context_name.clone(), Some(cc.provider.clone())));
+            }
+        }
+    }
+
     items.sort_by(|a, b| a.name.cmp(&b.name));
     items.dedup_by(|a, b| a.name == b.name);
 
@@ -179,14 +192,9 @@ fn select_or_list_merged(
 fn discover_and_cache(cloud_settings: &crate::settings::CloudSettings) -> Vec<CloudContext> {
     let mut contexts = Vec::new();
     for provider in cloud::enabled_providers(cloud_settings) {
-        match provider.discover() {
-            Ok(discovered) => {
-                let _ = cloud::cache::save_contexts(provider.name(), &discovered);
-                contexts.extend(discovered);
-            }
-            Err(e) => {
-                eprintln!("Warning: cloud provider '{}' discovery failed: {e}", provider.name());
-            }
+        if let Ok(discovered) = provider.discover() {
+            let _ = cloud::cache::save_contexts(provider.name(), &discovered);
+            contexts.extend(discovered);
         }
     }
     contexts

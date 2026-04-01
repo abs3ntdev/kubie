@@ -1,4 +1,5 @@
 use std::process::{Command, Stdio};
+use std::sync::Mutex;
 
 use anyhow::{bail, Context, Result};
 use serde::Deserialize;
@@ -41,7 +42,10 @@ impl ClusterInfo {
     }
 }
 
-pub struct DoctlProvider;
+pub struct DoctlProvider {
+    pub include: Vec<String>,
+    pub exclude: Vec<String>,
+}
 
 impl CloudProvider for DoctlProvider {
     fn name(&self) -> &'static str {
@@ -49,27 +53,34 @@ impl CloudProvider for DoctlProvider {
     }
 
     fn discover(&self) -> Result<Vec<CloudContext>> {
-        let auth_contexts = list_auth_contexts()?;
-        let mut cloud_contexts = Vec::new();
+        let mut auth_contexts = list_auth_contexts()?;
 
-        for ctx in &auth_contexts {
-            match list_clusters(&ctx.name) {
-                Ok(clusters) => {
-                    for c in clusters {
-                        cloud_contexts.push(CloudContext {
-                            context_name: c.kube_context_name(),
-                            provider_key: c.provider_key(),
-                            provider: "doctl".into(),
-                        });
-                    }
-                }
-                Err(e) => {
-                    eprintln!("Warning: failed to list clusters for '{}': {e}", ctx.name);
-                }
-            }
+        if !self.include.is_empty() {
+            auth_contexts.retain(|c| self.include.iter().any(|i| i == &c.name));
         }
+        auth_contexts.retain(|c| !self.exclude.iter().any(|e| e == &c.name));
 
-        Ok(cloud_contexts)
+        let cloud_contexts: Mutex<Vec<CloudContext>> = Mutex::new(Vec::new());
+
+        std::thread::scope(|s| {
+            for ctx in &auth_contexts {
+                let cloud_contexts = &cloud_contexts;
+                s.spawn(move || {
+                    if let Ok(clusters) = list_clusters(&ctx.name) {
+                        let mut ctxs = cloud_contexts.lock().unwrap_or_else(|e| e.into_inner());
+                        for c in clusters {
+                            ctxs.push(CloudContext {
+                                context_name: c.kube_context_name(),
+                                provider_key: c.provider_key(),
+                                provider: "doctl".into(),
+                            });
+                        }
+                    }
+                });
+            }
+        });
+
+        Ok(cloud_contexts.into_inner().unwrap_or_default())
     }
 
     fn download_kubeconfig(&self, provider_key: &str) -> Result<String> {
