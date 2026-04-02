@@ -30,11 +30,12 @@ fi
 
 # Source user zshenv. If it changes ZDOTDIR, capture the new value.
 if [[ -f "$_KUBIE_ORIG_ZDOTDIR/.zshenv" ]] ; then
+    _KUBIE_PRE_ZDOTDIR="$ZDOTDIR"
     source "$_KUBIE_ORIG_ZDOTDIR/.zshenv"
-    # If .zshenv set a custom ZDOTDIR, use that for all subsequent lookups.
-    if [[ -n "$ZDOTDIR" && "$ZDOTDIR" != "${{_KUBIE_ORIG_ZDOTDIR}}" && "$ZDOTDIR" != "/tmp/"* ]]; then
+    if [[ "$ZDOTDIR" != "$_KUBIE_PRE_ZDOTDIR" ]]; then
         _KUBIE_ORIG_ZDOTDIR="$ZDOTDIR"
     fi
+    unset _KUBIE_PRE_ZDOTDIR
 fi
 
 # Explicitly set HISTFILE so history is preserved across kubie sessions.

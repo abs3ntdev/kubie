@@ -170,7 +170,7 @@ fn run_hook(info: &ShellSpawnInfo, hook: &str) {
 /// Directory for the guardian's tracking file and pidfile.
 fn guardian_dir() -> PathBuf {
     let uid = unsafe { libc::getuid() };
-    PathBuf::from(format!("/tmp/kubie-guardian-{uid}"))
+    std::env::temp_dir().join(format!("kubie-guardian-{uid}"))
 }
 
 /// Register a kubie session's temp files with the shared cleanup guardian.
