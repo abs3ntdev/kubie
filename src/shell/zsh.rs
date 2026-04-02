@@ -16,11 +16,10 @@ pub fn spawn_shell(info: &ShellSpawnInfo) -> Result<()> {
         write!(
             zshrc_buf,
             r#"
-# Save the original ZDOTDIR before kubie overwrites it.
-# If the user has a custom ZDOTDIR (set in their environment or .zshenv),
-# we need to preserve it so plugins and configs that reference $ZDOTDIR
-# continue to work after initialization.
-_KUBIE_ORIG_ZDOTDIR="${{ZDOTDIR:-$HOME}}"
+# _KUBIE_REAL_ZDOTDIR is set by kubie before ZDOTDIR is overwritten to the
+# temp dir. It contains the user's actual ZDOTDIR (or $HOME if unset).
+_KUBIE_ORIG_ZDOTDIR="$_KUBIE_REAL_ZDOTDIR"
+unset _KUBIE_REAL_ZDOTDIR
 
 # Source system zshenv.
 if [[ -f "/etc/zshenv" ]] ; then
@@ -31,16 +30,14 @@ fi
 
 # Source user zshenv. If it changes ZDOTDIR, capture the new value.
 if [[ -f "$_KUBIE_ORIG_ZDOTDIR/.zshenv" ]] ; then
-    _KUBIE_PRE_ZDOTDIR="$ZDOTDIR"
     source "$_KUBIE_ORIG_ZDOTDIR/.zshenv"
-    if [[ "$ZDOTDIR" != "$_KUBIE_PRE_ZDOTDIR" ]]; then
+    # If .zshenv set a custom ZDOTDIR, use that for all subsequent lookups.
+    if [[ -n "$ZDOTDIR" && "$ZDOTDIR" != "${{_KUBIE_ORIG_ZDOTDIR}}" && "$ZDOTDIR" != "/tmp/"* ]]; then
         _KUBIE_ORIG_ZDOTDIR="$ZDOTDIR"
     fi
-    unset _KUBIE_PRE_ZDOTDIR
 fi
 
-# Explicitly set HISTFILE so history is preserved across kubie sessions
-# instead of being written to the temp ZDOTDIR and lost.
+# Explicitly set HISTFILE so history is preserved across kubie sessions.
 export HISTFILE="${{HISTFILE:-$_KUBIE_ORIG_ZDOTDIR/.zsh_history}}"
 
 # Source system and user zprofile.
@@ -83,8 +80,6 @@ unset _KUBIE_ORIG_ZDOTDIR
 
 autoload -Uz add-zsh-hook
 
-# Ensure KUBECONFIG is always set before a command runs,
-# in case something overwrote it.
 function __kubie_cmd_pre_exec__() {{
     export KUBECONFIG="$KUBIE_KUBECONFIG"
 }}
@@ -124,7 +119,14 @@ add-zsh-hook precmd __kubie_cmd_pre_cmd__
         }
     }
 
+    // Capture the user's real ZDOTDIR before overwriting it with the temp dir.
+    let real_zdotdir = std::env::var("ZDOTDIR")
+        .ok()
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| std::env::var("HOME").unwrap_or_default());
+
     let mut cmd = Command::new("zsh");
+    cmd.env("_KUBIE_REAL_ZDOTDIR", &real_zdotdir);
     cmd.env("ZDOTDIR", dir.path());
     info.env_vars.apply(&mut cmd);
 
