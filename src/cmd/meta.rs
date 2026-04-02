@@ -102,6 +102,10 @@ pub enum Kubie {
         context_name: Option<String>,
     },
 
+    /// List all active kubie sessions.
+    #[clap(name = "sessions")]
+    Sessions,
+
     /// Generate a completion script. Enable completion using
     /// `source <(kubie generate-completion)`. This can be added to your shell's
     /// configuration file to enable completion automatically.

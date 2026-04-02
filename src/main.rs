@@ -78,6 +78,9 @@ fn main() -> Result<()> {
         } => {
             cmd::export::export(&settings, context_name, namespace_name)?;
         }
+        Kubie::Sessions => {
+            cmd::sessions::sessions()?;
+        }
         Kubie::GenerateCompletion(cmd) => {
             cmd::meta::generate_completion(cmd);
         }

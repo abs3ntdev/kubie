@@ -172,6 +172,12 @@ _arguments "${_arguments_options[@]}" : \
 '::context_name -- Name of the context to edit:_default' \
 && ret=0
 ;;
+(sessions)
+_arguments "${_arguments_options[@]}" : \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
 (generate-completion)
 _arguments "${_arguments_options[@]}" : \
 '-h[Print help]' \
@@ -255,6 +261,10 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
+(sessions)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
 (generate-completion)
 _arguments "${_arguments_options[@]}" : \
 && ret=0
@@ -285,6 +295,7 @@ _kubie_commands() {
 'edit-config:Edit kubie'\''s config file' \
 'update:Check for a Kubie update and replace Kubie'\''s binary if needed. This function can ask for sudo-mode' \
 'delete:Delete a context. Automatic garbage collection will be performed. Dangling users and clusters will be removed' \
+'sessions:List all active kubie sessions' \
 'generate-completion:Generate a completion script. Enable completion using \`source <(kubie generate-completion)\`. This can be added to your shell'\''s configuration file to enable completion automatically' \
 'help:Print this message or the help of the given subcommand(s)' \
     )
@@ -338,6 +349,7 @@ _kubie__help_commands() {
 'edit-config:Edit kubie'\''s config file' \
 'update:Check for a Kubie update and replace Kubie'\''s binary if needed. This function can ask for sudo-mode' \
 'delete:Delete a context. Automatic garbage collection will be performed. Dangling users and clusters will be removed' \
+'sessions:List all active kubie sessions' \
 'generate-completion:Generate a completion script. Enable completion using \`source <(kubie generate-completion)\`. This can be added to your shell'\''s configuration file to enable completion automatically' \
 'help:Print this message or the help of the given subcommand(s)' \
     )
@@ -417,6 +429,11 @@ _kubie__help__ns_commands() {
     local commands; commands=()
     _describe -t commands 'kubie help ns commands' commands "$@"
 }
+(( $+functions[_kubie__help__sessions_commands] )) ||
+_kubie__help__sessions_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie help sessions commands' commands "$@"
+}
 (( $+functions[_kubie__help__update_commands] )) ||
 _kubie__help__update_commands() {
     local commands; commands=()
@@ -486,6 +503,11 @@ _kubie__lint_commands() {
 _kubie__ns_commands() {
     local commands; commands=()
     _describe -t commands 'kubie ns commands' commands "$@"
+}
+(( $+functions[_kubie__sessions_commands] )) ||
+_kubie__sessions_commands() {
+    local commands; commands=()
+    _describe -t commands 'kubie sessions commands' commands "$@"
 }
 (( $+functions[_kubie__update_commands] )) ||
 _kubie__update_commands() {
