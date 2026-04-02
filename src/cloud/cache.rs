@@ -28,7 +28,7 @@ struct CacheFile {
 
 /// Returns the cache file path for a given provider.
 fn cache_path(provider: &str) -> PathBuf {
-    let base = dirs::cache_dir().unwrap_or_else(|| PathBuf::from("/tmp"));
+    let base = dirs::cache_dir().unwrap_or_else(std::env::temp_dir);
     base.join("kubie").join("cloud").join(provider).join("contexts.json")
 }
 
