@@ -237,20 +237,39 @@ pub fn context(
         },
     };
 
+    // Build the full list of available context names for matching.
+    let mut all_names: Vec<String> = installed.contexts.iter().map(|c| c.item.name.clone()).collect();
+    {
+        let cloud = cloud_contexts.lock().unwrap_or_else(|e| e.into_inner());
+        for cc in cloud.iter() {
+            if !local_names.contains(&cc.context_name) {
+                all_names.push(cc.context_name.clone());
+            }
+        }
+    }
+
+    // Exact match or "-" passes through, otherwise fuzzy match.
+    let resolved = if context_name == "-" || all_names.iter().any(|n| n == &context_name) {
+        context_name
+    } else if let Some(fuzzy_hit) = crate::skim::fuzzy_match(&context_name, &all_names) {
+        fuzzy_hit
+    } else {
+        anyhow::bail!("No context matching '{context_name}' found");
+    };
+
     // Check if this is a cloud context (check the potentially-updated shared list).
     let cloud_ctx = {
         let cloud = cloud_contexts.lock().unwrap_or_else(|e| e.into_inner());
-        cloud.iter().find(|c| c.context_name == context_name).cloned()
+        cloud.iter().find(|c| c.context_name == resolved).cloned()
     };
 
     if let Some(ref cc) = cloud_ctx {
-        if local_names.contains(&context_name) {
-            // Context exists locally -- prefer the local version.
-            enter_context(settings, installed, &context_name, namespace_name.as_deref(), recursive)
+        if local_names.contains(&resolved) {
+            enter_context(settings, installed, &resolved, namespace_name.as_deref(), recursive)
         } else {
             enter_cloud_context(settings, cc, namespace_name.as_deref(), recursive)
         }
     } else {
-        enter_context(settings, installed, &context_name, namespace_name.as_deref(), recursive)
+        enter_context(settings, installed, &resolved, namespace_name.as_deref(), recursive)
     }
 }

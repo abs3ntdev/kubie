@@ -3,6 +3,7 @@ use std::io::Cursor;
 use std::sync::Arc;
 
 use anyhow::Result;
+use skim::fuzzy_matcher::FuzzyMatcher;
 use skim::prelude::{SkimItemReader, SkimItemSender, SkimOptionsBuilder};
 use skim::{Skim, SkimItem};
 
@@ -132,4 +133,15 @@ where
     } else {
         Ok(Some(output.selected_items[0].output().to_string()))
     }
+}
+
+/// Fuzzy match a query against a list of candidates. Returns the best match
+/// if the score is above zero, or None if nothing matches.
+pub fn fuzzy_match(query: &str, candidates: &[String]) -> Option<String> {
+    let matcher = skim::fuzzy_matcher::skim::SkimMatcherV2::default();
+    candidates
+        .iter()
+        .filter_map(|c| matcher.fuzzy_match(c, query).map(|score| (c, score)))
+        .max_by_key(|(_, score)| *score)
+        .map(|(c, _)| c.clone())
 }
