@@ -13,11 +13,13 @@ pub fn spawn_shell(info: &ShellSpawnInfo) -> Result<()> {
         let zshrc_path = dir.path().join(".zshrc");
         let zshrc = File::create(zshrc_path).context("Could not open zshrc file")?;
         let mut zshrc_buf = BufWriter::new(zshrc);
+
+        // Phase 1: kubie setup -- runs before any user config so it survives
+        // plugin managers (p10k, antidote, etc.) that may prevent execution
+        // from continuing after the user's .zshrc.
         write!(
             zshrc_buf,
             r#"
-# _KUBIE_REAL_ZDOTDIR is set by kubie before ZDOTDIR is overwritten to the
-# temp dir. It contains the user's actual ZDOTDIR (or $HOME if unset).
 _KUBIE_ORIG_ZDOTDIR="$_KUBIE_REAL_ZDOTDIR"
 unset _KUBIE_REAL_ZDOTDIR
 
@@ -38,7 +40,6 @@ if [[ -f "$_KUBIE_ORIG_ZDOTDIR/.zshenv" ]] ; then
     unset _KUBIE_PRE_ZDOTDIR
 fi
 
-# Explicitly set HISTFILE so history is preserved across kubie sessions.
 export HISTFILE="${{HISTFILE:-$_KUBIE_ORIG_ZDOTDIR/.zsh_history}}"
 
 # Source system and user zprofile.
@@ -52,33 +53,7 @@ if [[ -f "$_KUBIE_ORIG_ZDOTDIR/.zprofile" ]] ; then
     source "$_KUBIE_ORIG_ZDOTDIR/.zprofile"
 fi
 
-# Source system and user zshrc.
-if [[ -f "/etc/zshrc" ]] ; then
-    source "/etc/zshrc"
-elif [[ -f "/etc/zsh/zshrc" ]] ; then
-    source "/etc/zsh/zshrc"
-fi
-
-if [[ -f "$_KUBIE_ORIG_ZDOTDIR/.zshrc" ]] ; then
-    ZDOTDIR="$_KUBIE_ORIG_ZDOTDIR" source "$_KUBIE_ORIG_ZDOTDIR/.zshrc"
-fi
-
-# Source system and user zlogin.
-if [[ -f "/etc/zlogin" ]] ; then
-    source "/etc/zlogin"
-elif [[ -f "/etc/zsh/zlogin" ]] ; then
-    source "/etc/zsh/zlogin"
-fi
-
-if [[ -f "$_KUBIE_ORIG_ZDOTDIR/.zlogin" ]] ; then
-    source "$_KUBIE_ORIG_ZDOTDIR/.zlogin"
-fi
-
-# Restore ZDOTDIR to the user's original value so plugins and scripts
-# that reference $ZDOTDIR at runtime point to the right place.
-ZDOTDIR="$_KUBIE_ORIG_ZDOTDIR"
-unset _KUBIE_ORIG_ZDOTDIR
-
+# Register all kubie hooks before sourcing user zshrc.
 autoload -Uz add-zsh-hook
 
 function __kubie_cmd_pre_exec__() {{
@@ -89,6 +64,7 @@ add-zsh-hook preexec __kubie_cmd_pre_exec__
 "#,
         )?;
 
+        // Prompt hook -- also registered before user zshrc.
         if !info.settings.prompt.disable {
             write!(
                 zshrc_buf,
@@ -118,6 +94,38 @@ add-zsh-hook precmd __kubie_cmd_pre_cmd__
                 info.prompt
             )?;
         }
+
+        // Phase 2: source user config. Everything after this point may not
+        // execute if p10k or other plugins interfere.
+        write!(
+            zshrc_buf,
+            r#"
+# Source system and user zshrc.
+if [[ -f "/etc/zshrc" ]] ; then
+    source "/etc/zshrc"
+elif [[ -f "/etc/zsh/zshrc" ]] ; then
+    source "/etc/zsh/zshrc"
+fi
+
+if [[ -f "$_KUBIE_ORIG_ZDOTDIR/.zshrc" ]] ; then
+    ZDOTDIR="$_KUBIE_ORIG_ZDOTDIR" source "$_KUBIE_ORIG_ZDOTDIR/.zshrc"
+fi
+
+# Source system and user zlogin.
+if [[ -f "/etc/zlogin" ]] ; then
+    source "/etc/zlogin"
+elif [[ -f "/etc/zsh/zlogin" ]] ; then
+    source "/etc/zsh/zlogin"
+fi
+
+if [[ -f "$_KUBIE_ORIG_ZDOTDIR/.zlogin" ]] ; then
+    source "$_KUBIE_ORIG_ZDOTDIR/.zlogin"
+fi
+
+ZDOTDIR="$_KUBIE_ORIG_ZDOTDIR"
+unset _KUBIE_ORIG_ZDOTDIR
+"#,
+        )?;
     }
 
     // Capture the user's real ZDOTDIR before overwriting it with the temp dir.
